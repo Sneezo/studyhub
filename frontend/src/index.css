@@ -49,3 +49,347 @@ a {
   background: white;
   border-radius: 8px;
 }
+
+.home-page {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 2rem;
+}
+
+.subject-panel {
+  border-right: 1px solid #ddd;
+  padding-right: 1.5rem;
+}
+
+.subject-panel h2 {
+  font-size: 1rem;
+  margin: 0 0 0.75rem 0;
+}
+
+.class-filter {
+  margin-bottom: 2rem;
+}
+
+.class-filter-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.class-filter-buttons button,
+.subject-list button {
+  border: 1px solid #ccc;
+  background: white;
+  padding: 0.6rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.class-filter-buttons button.active,
+.subject-list button.active {
+  background: #20232a;
+  color: white;
+  border-color: #20232a;
+}
+
+.subject-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.subject-list button {
+  text-align: left;
+}
+
+.subject-content h2 {
+  font-size: 2rem;
+  margin: 0 0 1rem 0;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #666;
+  margin: 0 0 0.5rem 0;
+}
+
+.content-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.content-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #fafafa;
+}
+
+.content-card h3 {
+  margin-top: 0;
+}
+
+@media (max-width: 800px) {
+  .home-page {
+    grid-template-columns: 1fr;
+  }
+
+  .subject-panel {
+    border-right: none;
+    border-bottom: 1px solid #ddd;
+    padding-right: 0;
+    padding-bottom: 1.5rem;
+  }
+
+  .content-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.flashcard-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.flashcard-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: start;
+}
+
+.flashcard-toolbar h2 {
+  font-size: 2rem;
+  margin: 0;
+}
+
+.flashcard-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: flex-end;
+}
+
+.flashcard-controls select,
+.flashcard-controls button {
+  border: 1px solid #ccc;
+  background: white;
+  color: #222;
+  border-radius: 8px;
+  padding: 0.65rem 0.9rem;
+  font: inherit;
+}
+
+.flashcard-controls select {
+  min-width: 220px;
+}
+
+.flashcard-controls button {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.flashcard-controls button:hover {
+  background: #f0f0f0;
+}
+
+.flashcard-progress-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1rem;
+  align-items: center;
+  font-size: 0.95rem;
+  color: #555;
+}
+
+.flashcard-progress {
+  height: 10px;
+  background: #e9e9e9;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.flashcard-progress-fill {
+  height: 100%;
+  background: #20232a;
+  border-radius: 999px;
+  transition: width 0.2s ease;
+}
+
+.study-card {
+  min-height: 320px;
+  border: 1px solid #ddd;
+  border-radius: 14px;
+  background: #fafafa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.study-card-inner {
+  max-width: 700px;
+  text-align: center;
+}
+
+.study-card h3 {
+  font-size: 2.4rem;
+  margin: 0 0 1rem 0;
+}
+
+.term-description {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #444;
+}
+
+.answer-hint {
+  margin-top: 1.5rem;
+  color: #666;
+}
+
+.answer-section {
+  margin-top: 2rem;
+  text-align: left;
+}
+
+.answer-section h4 {
+  margin: 0 0 0.5rem 0;
+}
+
+.flashcard-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: #555;
+  font-size: 0.95rem;
+}
+
+kbd {
+  border: 1px solid #ccc;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: #f7f7f7;
+  padding: 0.1rem 0.35rem;
+  font: inherit;
+  font-size: 0.85em;
+}
+
+@media (max-width: 1000px) {
+  .flashcard-toolbar {
+    flex-direction: column;
+  }
+
+  .flashcard-controls {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 700px) {
+  .flashcard-controls {
+    flex-direction: column;
+  }
+
+  .flashcard-controls select,
+  .flashcard-controls button {
+    width: 100%;
+  }
+
+  .flashcard-progress-row {
+    grid-template-columns: 1fr;
+  }
+
+  .flashcard-footer {
+    flex-direction: column;
+  }
+
+  .study-card h3 {
+    font-size: 2rem;
+  }
+}
+
+.review-count {
+  margin: 0.5rem 0 0 0;
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.flashcard-controls button.review-active {
+  border-color: #20232a;
+  background: #20232a;
+  color: white;
+}
+
+.review-badge {
+  display: inline-block;
+  margin: 0 0 1rem 0;
+  border: 1px solid #ccc;
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  background: white;
+}
+
+.review-panel {
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 1.25rem;
+  background: #fafafa;
+}
+
+.review-panel-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: start;
+  margin-bottom: 1rem;
+}
+
+.review-panel-header h3 {
+  margin: 0;
+}
+
+.review-panel-header button,
+.review-actions button {
+  border: 1px solid #ccc;
+  background: white;
+  border-radius: 8px;
+  padding: 0.6rem 0.9rem;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.review-panel label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+.review-panel textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 0.8rem;
+  font: inherit;
+}
+
+.review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.existing-review-note {
+  margin: 1rem 0 0 0;
+  color: #555;
+}
