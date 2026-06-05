@@ -1,20 +1,43 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  clearStoredReviewFlag,
-  getStoredReviewFlags,
-} from "../data/reviewFlagStorage";
-import { getStoredTerm } from "../data/termStorage";
+  clearCmsReviewFlag,
+  getCmsReviewFlags,
+  getCmsTerms,
+} from "../api/studyHubApi";
 import type { ReviewFlag } from "../data/reviewFlagStorage";
+import type { Term } from "../data/terms";
 
 export function CmsReviewPage() {
-  const [flags, setFlags] = useState<ReviewFlag[]>(() =>
-    Object.values(getStoredReviewFlags())
-  );
+  const [flags, setFlags] = useState<ReviewFlag[]>([]);
+  const [terms, setTerms] = useState<Term[]>([]);
+  const [error, setError] = useState("");
 
-  function handleClear(termId: number) {
-    clearStoredReviewFlag(termId);
-    setFlags(Object.values(getStoredReviewFlags()));
+  useEffect(() => {
+    async function loadReviewData() {
+      try {
+        const [loadedFlags, loadedTerms] = await Promise.all([
+          getCmsReviewFlags(),
+          getCmsTerms(),
+        ]);
+
+        setFlags(loadedFlags);
+        setTerms(loadedTerms);
+      } catch {
+        setError("Could not load review flags.");
+      }
+    }
+
+    loadReviewData();
+  }, []);
+
+  async function handleClear(termId: number) {
+    try {
+      await clearCmsReviewFlag(termId);
+      setFlags((previous) => previous.filter((flag) => flag.termId !== termId));
+    } catch {
+      alert("Could not clear review flag.");
+    }
   }
 
   return (
@@ -27,6 +50,8 @@ export function CmsReviewPage() {
         </div>
       </div>
 
+      {error && <p className="form-error">{error}</p>}
+
       {flags.length === 0 ? (
         <div className="empty-state">
           <h3>No review flags</h3>
@@ -35,7 +60,7 @@ export function CmsReviewPage() {
       ) : (
         <div className="review-list">
           {flags.map((flag) => {
-            const term = getStoredTerm(flag.termId);
+            const term = terms.find((item) => item.id === flag.termId);
 
             return (
               <article key={flag.termId} className="review-item">

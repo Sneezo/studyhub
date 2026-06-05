@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { deleteStoredTerm, getStoredTerms } from "../data/termStorage";
+import { deleteCmsTerm, getCmsTerms } from "../api/studyHubApi";
 import type { Term } from "../data/terms";
 
 export function CmsTermsPage() {
-  const [terms, setTerms] = useState<Term[]>(() => getStoredTerms());
+  const [terms, setTerms] = useState<Term[]>([]);
+  const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [selectedTag, setSelectedTag] = useState("All");
 
@@ -26,16 +27,33 @@ export function CmsTermsPage() {
     });
   }, [terms, search, selectedTag]);
 
-  function handleDelete(termId: number) {
-    const confirmed = confirm("Delete this term?");
+    async function handleDelete(termId: number) {
+        const confirmed = confirm("Delete this term?");
 
-    if (!confirmed) {
-      return;
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            await deleteCmsTerm(termId);
+            setTerms((previous) => previous.filter((term) => term.id !== termId));
+        } catch {
+            alert("Could not delete term.");
+        }
     }
 
-    deleteStoredTerm(termId);
-    setTerms(getStoredTerms());
-  }
+  useEffect(() => {
+    async function loadTerms() {
+        try {
+        const loadedTerms = await getCmsTerms();
+        setTerms(loadedTerms);
+        } catch {
+        setError("Could not load terms.");
+        }
+    }
+
+    loadTerms();
+    }, []);
 
   return (
     <section className="cms-page">
@@ -74,6 +92,7 @@ export function CmsTermsPage() {
       </div>
 
       <div className="cms-table-wrapper">
+        {error && <p className="form-error">{error}</p>}
         <table className="cms-table">
           <thead>
             <tr>

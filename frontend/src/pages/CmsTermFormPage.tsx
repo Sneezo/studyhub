@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
-  getNextTermId,
-  getStoredTerm,
-  upsertStoredTerm,
-} from "../data/termStorage";
+  createCmsTerm,
+  getCmsTerm,
+  updateCmsTerm,
+} from "../api/studyHubApi";
 import type { Term } from "../data/terms";
 
 type CmsTermFormPageProps = {
@@ -17,29 +17,41 @@ export function CmsTermFormPage({ mode }: CmsTermFormPageProps) {
   const params = useParams();
 
   const termId = Number(params.id);
-  const existingTerm = mode === "edit" ? getStoredTerm(termId) : undefined;
 
-  const [term, setTerm] = useState(existingTerm?.term ?? "");
-  const [description, setDescription] = useState(
-    existingTerm?.description ?? ""
-  );
-  const [definition, setDefinition] = useState(existingTerm?.definition ?? "");
-  const [tagsText, setTagsText] = useState(
-    existingTerm?.tags.join(", ") ?? ""
-  );
+  const [existingTerm, setExistingTerm] = useState<Term | null>(null);
+  const [isLoading, setIsLoading] = useState(mode === "edit");
+
+  const [term, setTerm] = useState("");
+  const [description, setDescription] = useState("");
+  const [definition, setDefinition] = useState("");
+  const [tagsText, setTagsText] = useState("");
   const [error, setError] = useState("");
 
-  if (mode === "edit" && !existingTerm) {
-    return (
-      <section className="cms-page">
-        <h2>Term not found</h2>
-        <p>The term you tried to edit does not exist.</p>
-        <Link to="/cms/terms">Back to terms</Link>
-      </section>
-    );
-  }
+  useEffect(() => {
+    if (mode !== "edit") {
+      return;
+    }
 
-  function handleSubmit(event: FormEvent) {
+    async function loadTerm() {
+      try {
+        const loadedTerm = await getCmsTerm(termId);
+
+        setExistingTerm(loadedTerm);
+        setTerm(loadedTerm.term);
+        setDescription(loadedTerm.description);
+        setDefinition(loadedTerm.definition);
+        setTagsText(loadedTerm.tags.join(", "));
+      } catch {
+        setError("Could not load term.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadTerm();
+  }, [mode, termId]);
+
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault();
 
     const parsedTags = tagsText
@@ -67,16 +79,51 @@ export function CmsTermFormPage({ mode }: CmsTermFormPageProps) {
       return;
     }
 
-    const savedTerm: Term = {
-      id: existingTerm?.id ?? getNextTermId(),
-      term: term.trim(),
-      description: description.trim(),
-      definition: definition.trim(),
-      tags: parsedTags,
-    };
+    try {
+      if (mode === "new") {
+        await createCmsTerm({
+          term: term.trim(),
+          description: description.trim(),
+          definition: definition.trim(),
+          tags: parsedTags,
+        });
+      } else {
+        if (!existingTerm) {
+          setError("Cannot save because the term was not loaded.");
+          return;
+        }
 
-    upsertStoredTerm(savedTerm);
-    navigate("/cms/terms");
+        await updateCmsTerm({
+          id: existingTerm.id,
+          term: term.trim(),
+          description: description.trim(),
+          definition: definition.trim(),
+          tags: parsedTags,
+        });
+      }
+
+      navigate("/cms/terms");
+    } catch {
+      setError("Could not save term.");
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <section className="cms-page">
+        <h2>Loading term...</h2>
+      </section>
+    );
+  }
+
+  if (mode === "edit" && error && !existingTerm) {
+    return (
+      <section className="cms-page">
+        <h2>Term not found</h2>
+        <p>{error}</p>
+        <Link to="/cms/terms">Back to terms</Link>
+      </section>
+    );
   }
 
   return (

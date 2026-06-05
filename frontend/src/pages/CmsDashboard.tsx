@@ -1,12 +1,35 @@
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { getStoredTerms } from "../data/termStorage";
-import { getStoredReviewFlags } from "../data/reviewFlagStorage";
+import { getCmsReviewFlags, getCmsTerms } from "../api/studyHubApi";
+import type { Term } from "../data/terms";
+import type { ReviewFlag } from "../data/reviewFlagStorage";
 
 export function CmsDashboard() {
-  const terms = getStoredTerms();
-  const reviewFlags = Object.values(getStoredReviewFlags());
+  const [terms, setTerms] = useState<Term[]>([]);
+  const [reviewFlags, setReviewFlags] = useState<ReviewFlag[]>([]);
+  const [error, setError] = useState("");
 
-  const uniqueTags = new Set(terms.flatMap((term) => term.tags));
+  useEffect(() => {
+    async function loadDashboard() {
+      try {
+        const [loadedTerms, loadedFlags] = await Promise.all([
+          getCmsTerms(),
+          getCmsReviewFlags(),
+        ]);
+
+        setTerms(loadedTerms);
+        setReviewFlags(loadedFlags);
+      } catch {
+        setError("Could not load CMS dashboard data.");
+      }
+    }
+
+    loadDashboard();
+  }, []);
+
+  const uniqueTags = useMemo(() => {
+    return new Set(terms.flatMap((term) => term.tags));
+  }, [terms]);
 
   return (
     <section className="cms-page">
@@ -17,6 +40,8 @@ export function CmsDashboard() {
           <p>Manage flashcards, definitions, tags and review feedback.</p>
         </div>
       </div>
+
+      {error && <p className="form-error">{error}</p>}
 
       <div className="cms-card-grid">
         <Link to="/cms/terms" className="cms-card">

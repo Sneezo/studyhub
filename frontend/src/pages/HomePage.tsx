@@ -1,15 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { subjects } from "../data/subjects";
-import { getStoredTerms } from "../data/termStorage";
-import {
-  getStoredReviewFlags,
-  saveStoredReviewFlags,
-} from "../data/reviewFlagStorage";
+import { createReviewFlag, getPublicTerms } from "../api/studyHubApi";
 import type { ClassFilter, Subject } from "../data/subjects";
 import type { Term } from "../data/terms";
 import type { ReviewFlag } from "../data/reviewFlagStorage";
-
-
 
 const classFilters: ClassFilter[] = ["All", "SN", "DS"];
 
@@ -18,435 +12,453 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 export function HomePage() {
-    const [selectedClass, setSelectedClass] = useState<ClassFilter>("All");
-    const [selectedSubjectId, setSelectedSubjectId] = useState<string>("network");
-    const [shuffledTermIds, setShuffledTermIds] = useState<number[] | null>(null);
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const [showAnswer, setShowAnswer] = useState(false);
-    const [allTerms] = useState<Term[]>(() => getStoredTerms());
-    
+  const [selectedClass, setSelectedClass] = useState<ClassFilter>("All");
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>("network");
 
-    const [reviewFlags, setReviewFlags] = useState<Record<number, ReviewFlag>>(
-    () => getStoredReviewFlags()
-    );
+  const [allTerms, setAllTerms] = useState<Term[]>([]);
+  const [isLoadingTerms, setIsLoadingTerms] = useState(true);
+  const [termsError, setTermsError] = useState("");
 
-    const [isReviewPanelOpen, setIsReviewPanelOpen] = useState(false);
-    const [reviewNote, setReviewNote] = useState("");
+  const [shuffledTermIds, setShuffledTermIds] = useState<number[] | null>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [showAnswer, setShowAnswer] = useState(false);
 
-    const visibleSubjects = useMemo(() => {
+  const [reviewFlags, setReviewFlags] = useState<Record<number, ReviewFlag>>(
+    {}
+  );
+  const [isReviewPanelOpen, setIsReviewPanelOpen] = useState(false);
+  const [reviewNote, setReviewNote] = useState("");
+
+  useEffect(() => {
+    async function loadTerms() {
+      try {
+        const loadedTerms = await getPublicTerms();
+        setAllTerms(loadedTerms);
+      } catch {
+        setTermsError("Could not load terms from the backend.");
+      } finally {
+        setIsLoadingTerms(false);
+      }
+    }
+
+    loadTerms();
+  }, []);
+
+  const visibleSubjects = useMemo(() => {
     if (selectedClass === "All") {
-        return subjects;
+      return subjects;
     }
 
     return subjects.filter((subject) =>
-        subject.classes.includes(selectedClass)
+      subject.classes.includes(selectedClass)
     );
-    }, [selectedClass]);
+  }, [selectedClass]);
 
-    const selectedSubject: Subject | undefined =
+  const selectedSubject: Subject | undefined =
     visibleSubjects.find((subject) => subject.id === selectedSubjectId) ??
     visibleSubjects[0];
 
-    const visibleTerms = useMemo(() => {
+  const visibleTerms = useMemo(() => {
     if (!selectedSubject) {
-        return [];
+      return [];
     }
 
     return allTerms.filter((term) => term.tags.includes(selectedSubject.id));
-    }, [selectedSubject]);
+  }, [selectedSubject, allTerms]);
 
-    const defaultTermIds = useMemo(() => {
+  const defaultTermIds = useMemo(() => {
     return visibleTerms.map((term) => term.id);
-    }, [visibleTerms]);
+  }, [visibleTerms]);
 
-    const termOrder = useMemo(() => {
+  const termOrder = useMemo(() => {
     if (!shuffledTermIds) {
-        return defaultTermIds;
+      return defaultTermIds;
     }
 
     const allowedIds = new Set(defaultTermIds);
     const validShuffledIds = shuffledTermIds.filter((id) =>
-        allowedIds.has(id)
+      allowedIds.has(id)
     );
 
     if (validShuffledIds.length !== defaultTermIds.length) {
-        return defaultTermIds;
+      return defaultTermIds;
     }
 
     return validShuffledIds;
-    }, [defaultTermIds, shuffledTermIds]);
+  }, [defaultTermIds, shuffledTermIds]);
 
-    const safeCurrentIndex =
+  const safeCurrentIndex =
     termOrder.length === 0
-        ? 0
-        : Math.min(currentIndex, termOrder.length - 1);
+      ? 0
+      : Math.min(currentIndex, termOrder.length - 1);
 
-    const currentTermId = termOrder[safeCurrentIndex];
+  const currentTermId = termOrder[safeCurrentIndex];
 
-    const currentTerm: Term | undefined = visibleTerms.find(
+  const currentTerm: Term | undefined = visibleTerms.find(
     (term) => term.id === currentTermId
-    );
+  );
 
-    const progressPercent =
+  const currentReviewFlag = currentTerm
+    ? reviewFlags[currentTerm.id]
+    : undefined;
+
+  const openReviewFlagCount = Object.keys(reviewFlags).length;
+
+  const progressPercent =
     visibleTerms.length > 0
-        ? ((safeCurrentIndex + 1) / visibleTerms.length) * 100
-        : 0;
+      ? ((safeCurrentIndex + 1) / visibleTerms.length) * 100
+      : 0;
 
-    const handleNext = useCallback(() => {
-        if (termOrder.length === 0) {
-            return;
-        }
+  const handleNext = useCallback(() => {
+    if (termOrder.length === 0) {
+      return;
+    }
 
-        setCurrentIndex((previous) => {
-            if (previous >= termOrder.length - 1) {
-                return 0;
-            }
-            return previous + 1;
-        });
+    setCurrentIndex((previous) => {
+      if (previous >= termOrder.length - 1) {
+        return 0;
+      }
+
+      return previous + 1;
+    });
 
     setShowAnswer(false);
-    }, [termOrder.length]);
+    setIsReviewPanelOpen(false);
+    setReviewNote("");
+  }, [termOrder.length]);
 
-    useEffect(() => {
-        localStorage.setItem("studyhub-review-flags", JSON.stringify(reviewFlags));
-    }, [reviewFlags]);
-
-    useEffect(() => {
-        saveStoredReviewFlags(reviewFlags);
-    }, [reviewFlags]);
-
-    useEffect(() => {
+  useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-        const target = event.target as HTMLElement | null;
-        const tagName = target?.tagName.toLowerCase();
+      const target = event.target as HTMLElement | null;
+      const tagName = target?.tagName.toLowerCase();
 
-        if (
+      if (
         tagName === "input" ||
         tagName === "textarea" ||
         tagName === "select"
-        ) {
+      ) {
         return;
-        }
+      }
 
-        if (event.key === " " || event.key.toLowerCase() === "s") {
+      if (event.key === " " || event.key.toLowerCase() === "s") {
         event.preventDefault();
         setShowAnswer((previous) => !previous);
-        }
+      }
 
-        if (event.key === "ArrowRight") {
+      if (event.key === "ArrowRight") {
         event.preventDefault();
         handleNext();
-        }
+      }
     }
 
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-        window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keydown", handleKeyDown);
     };
-    }, [handleNext]);
+  }, [handleNext]);
 
-    function handleClassChange(classFilter: ClassFilter) {
+  function handleClassChange(classFilter: ClassFilter) {
     setSelectedClass(classFilter);
 
     const firstSubjectForClass =
-        classFilter === "All"
+      classFilter === "All"
         ? subjects[0]
         : subjects.find((subject) => subject.classes.includes(classFilter));
 
     if (firstSubjectForClass) {
-        setSelectedSubjectId(firstSubjectForClass.id);
+      setSelectedSubjectId(firstSubjectForClass.id);
     }
 
     setCurrentIndex(0);
     setShowAnswer(false);
     setShuffledTermIds(null);
-    }
+    setIsReviewPanelOpen(false);
+    setReviewNote("");
+  }
 
-    function handleSubjectChange(subjectId: string) {
+  function handleSubjectChange(subjectId: string) {
     setSelectedSubjectId(subjectId);
     setCurrentIndex(0);
     setShowAnswer(false);
     setShuffledTermIds(null);
-    }
+    setIsReviewPanelOpen(false);
+    setReviewNote("");
+  }
 
-    function handleTermSelect(termId: number) {
+  function handleTermSelect(termId: number) {
     const newIndex = termOrder.findIndex((id) => id === termId);
 
     if (newIndex !== -1) {
-        setCurrentIndex(newIndex);
-        setShowAnswer(false);
+      setCurrentIndex(newIndex);
+      setShowAnswer(false);
+      setIsReviewPanelOpen(false);
+      setReviewNote("");
     }
-    }
+  }
 
-    function handleShuffle() {
+  function handleShuffle() {
     setShuffledTermIds(shuffleArray(defaultTermIds));
     setCurrentIndex(0);
     setShowAnswer(false);
-    }
+    setIsReviewPanelOpen(false);
+    setReviewNote("");
+  }
 
-    function handleReset() {
+  function handleReset() {
     setShuffledTermIds(null);
     setCurrentIndex(0);
     setShowAnswer(false);
-    }
+    setIsReviewPanelOpen(false);
+    setReviewNote("");
+  }
 
-    const currentReviewFlag = currentTerm
-    ? reviewFlags[currentTerm.id]
-    : undefined;
-
-    const openReviewFlagCount = Object.keys(reviewFlags).length;
-
-    function handleOpenReviewPanel() {
+  function handleOpenReviewPanel() {
     if (!currentTerm) {
-    return;
+      return;
     }
 
     setReviewNote(currentReviewFlag?.note ?? "");
     setIsReviewPanelOpen(true);
-    }
+  }
 
-    function handleSubmitReviewFlag() {
+  async function handleSubmitReviewFlag() {
     if (!currentTerm || !selectedSubject) {
-    return;
+      return;
     }
 
     const trimmedNote = reviewNote.trim();
 
     if (!trimmedNote) {
-    return;
+      return;
     }
 
-    const newFlag: ReviewFlag = {
-    termId: currentTerm.id,
-    term: currentTerm.term,
-    subjectId: selectedSubject.id,
-    note: trimmedNote,
-    createdAt: new Date().toISOString(),
-    status: "open",
-    };
+    try {
+      const newFlag = await createReviewFlag({
+        termId: currentTerm.id,
+        subjectId: selectedSubject.id,
+        note: trimmedNote,
+      });
 
-    setReviewFlags((previous) => ({
-    ...previous,
-    [currentTerm.id]: newFlag,
-    }));
+      setReviewFlags((previous) => ({
+        ...previous,
+        [currentTerm.id]: newFlag,
+      }));
 
-    setIsReviewPanelOpen(false);
-    setReviewNote("");
+      setIsReviewPanelOpen(false);
+      setReviewNote("");
+    } catch {
+      alert("Could not submit review flag.");
     }
+  }
 
-    function handleClearReviewFlag() {
-    if (!currentTerm) {
-    return;
-    }
-
-    setReviewFlags((previous) => {
-    const updated = { ...previous };
-    delete updated[currentTerm.id];
-    return updated;
-    });
-
-    setIsReviewPanelOpen(false);
-    setReviewNote("");
-    }
-
-    return (
+  return (
     <div className="home-page">
-        <aside className="subject-panel">
+      <aside className="subject-panel">
         <div className="class-filter">
-            <h2>Class</h2>
+          <h2>Class</h2>
 
-            <div className="class-filter-buttons">
+          <div className="class-filter-buttons">
             {classFilters.map((filter) => (
-                <button
+              <button
                 key={filter}
                 type="button"
                 className={selectedClass === filter ? "active" : ""}
                 onClick={() => handleClassChange(filter)}
-                >
+              >
                 {filter}
-                </button>
+              </button>
             ))}
-            </div>
+          </div>
         </div>
 
         <div className="subject-list">
-            <h2>Subjects</h2>
+          <h2>Subjects</h2>
 
-            {visibleSubjects.map((subject) => (
+          {visibleSubjects.map((subject) => (
             <button
-                key={subject.id}
-                type="button"
-                className={selectedSubject?.id === subject.id ? "active" : ""}
-                onClick={() => handleSubjectChange(subject.id)}
+              key={subject.id}
+              type="button"
+              className={selectedSubject?.id === subject.id ? "active" : ""}
+              onClick={() => handleSubjectChange(subject.id)}
             >
-                {subject.name}
+              {subject.name}
             </button>
-            ))}
+          ))}
         </div>
-        </aside>
+      </aside>
 
-        <section className="flashcard-page">
-        {selectedSubject && currentTerm ? (
-            <>
+      <section className="flashcard-page">
+        {isLoadingTerms && <p>Loading flashcards...</p>}
+
+        {termsError && <p className="form-error">{termsError}</p>}
+
+        {!isLoadingTerms && !termsError && selectedSubject && currentTerm ? (
+          <>
             <div className="flashcard-toolbar">
-                <div>
+              <div>
                 <p className="eyebrow">{selectedClass} subjects</p>
                 <h2>{selectedSubject.name} Flashcards</h2>
-                {openReviewFlagCount > 0 && (
-                <p className="review-count">
-                    {openReviewFlagCount} term{openReviewFlagCount === 1 ? "" : "s"} flagged for review
-                </p>
-                )}
-                </div>
 
-                <div className="flashcard-controls">
+                {openReviewFlagCount > 0 && (
+                  <p className="review-count">
+                    {openReviewFlagCount} term
+                    {openReviewFlagCount === 1 ? "" : "s"} flagged for review
+                  </p>
+                )}
+              </div>
+
+              <div className="flashcard-controls">
                 <select
-                    value={currentTerm.id}
-                    onChange={(event) =>
+                  value={currentTerm.id}
+                  onChange={(event) =>
                     handleTermSelect(Number(event.target.value))
-                    }
+                  }
                 >
-                    {termOrder.map((termId, index) => {
+                  {termOrder.map((termId, index) => {
                     const term = visibleTerms.find((item) => item.id === termId);
 
                     if (!term) {
-                        return null;
+                      return null;
                     }
 
                     return (
-                        <option key={term.id} value={term.id}>
+                      <option key={term.id} value={term.id}>
                         {index + 1}. {term.term}
-                        </option>
+                      </option>
                     );
-                    })}
+                  })}
                 </select>
 
                 <button type="button" onClick={() => setShowAnswer(true)}>
-                    Show answer
+                  Show answer
                 </button>
 
                 <button
-                    type="button"
-                    className={currentReviewFlag ? "review-active" : ""}
-                    onClick={handleOpenReviewPanel}
-                    >
-                    {currentReviewFlag ? "Flagged" : "Flag for review"}
+                  type="button"
+                  className={currentReviewFlag ? "review-active" : ""}
+                  onClick={handleOpenReviewPanel}
+                >
+                  {currentReviewFlag ? "Flagged" : "Flag for review"}
                 </button>
 
                 <button type="button" onClick={handleNext}>
-                    Next
+                  Next
                 </button>
 
                 <button type="button" onClick={handleShuffle}>
-                    Shuffle
+                  Shuffle
                 </button>
 
                 <button type="button" onClick={handleReset}>
-                    Reset
+                  Reset
                 </button>
-                </div>
+              </div>
             </div>
 
             <div className="flashcard-progress-row">
-                <div className="flashcard-progress">
+              <div className="flashcard-progress">
                 <div
-                    className="flashcard-progress-fill"
-                    style={{ width: `${progressPercent}%` }}
+                  className="flashcard-progress-fill"
+                  style={{ width: `${progressPercent}%` }}
                 />
-                </div>
+              </div>
 
-                <span>
+              <span>
                 {safeCurrentIndex + 1} / {visibleTerms.length} seen
-                </span>
+              </span>
             </div>
 
             <article className="study-card">
-                <div className="study-card-inner">
+              <div className="study-card-inner">
                 <h3>{currentTerm.term}</h3>
+
                 {currentReviewFlag && (
-                    <p className="review-badge">Flagged for review</p>
+                  <p className="review-badge">Flagged for review</p>
                 )}
 
                 <p className="term-description">{currentTerm.description}</p>
 
                 {!showAnswer ? (
-                    <p className="answer-hint">
+                  <p className="answer-hint">
                     Press <kbd>S</kbd> or Space to show the answer
-                    </p>
+                  </p>
                 ) : (
-                    <div className="answer-section">
+                  <div className="answer-section">
                     <h4>Definition</h4>
                     <p>{currentTerm.definition}</p>
 
                     <div className="tag-list">
-                        {currentTerm.tags.map((tag) => (
+                      {currentTerm.tags.map((tag) => (
                         <span key={tag}>{tag}</span>
-                        ))}
+                      ))}
                     </div>
-                    </div>
+                  </div>
                 )}
-                </div>
+              </div>
             </article>
-            {isReviewPanelOpen && currentTerm && (
-                <section className="review-panel">
-                    <div className="review-panel-header">
-                    <div>
-                        <p className="eyebrow">Review feedback</p>
-                        <h3>{currentTerm.term}</h3>
-                    </div>
 
-                    <button type="button" onClick={() => setIsReviewPanelOpen(false)}>
-                        Close
-                    </button>
-                    </div>
+            {isReviewPanelOpen && (
+              <section className="review-panel">
+                <div className="review-panel-header">
+                  <div>
+                    <p className="eyebrow">Review feedback</p>
+                    <h3>{currentTerm.term}</h3>
+                  </div>
 
-                    <label htmlFor="review-note">
-                    What should be improved?
-                    </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsReviewPanelOpen(false)}
+                  >
+                    Close
+                  </button>
+                </div>
 
-                    <textarea
-                    id="review-note"
-                    value={reviewNote}
-                    onChange={(event) => setReviewNote(event.target.value)}
-                    placeholder="Example: The definition is too vague, missing an example, or uses a confusing explanation."
-                    rows={4}
-                    />
+                <label htmlFor="review-note">What should be improved?</label>
 
-                    <div className="review-actions">
-                    <button type="button" onClick={handleSubmitReviewFlag}>
-                        Submit review flag
-                    </button>
+                <textarea
+                  id="review-note"
+                  value={reviewNote}
+                  onChange={(event) => setReviewNote(event.target.value)}
+                  placeholder="Example: The definition is too vague, missing an example, or uses a confusing explanation."
+                  rows={4}
+                />
 
-                    {currentReviewFlag && (
-                        <button type="button" onClick={handleClearReviewFlag}>
-                        Clear flag
-                        </button>
-                    )}
-                    </div>
+                <div className="review-actions">
+                  <button type="button" onClick={handleSubmitReviewFlag}>
+                    {currentReviewFlag
+                      ? "Update review flag"
+                      : "Submit review flag"}
+                  </button>
+                </div>
 
-                    {currentReviewFlag && (
-                    <p className="existing-review-note">
-                        Current note: {currentReviewFlag.note}
-                    </p>
-                    )}
-                </section>
+                {currentReviewFlag && (
+                  <p className="existing-review-note">
+                    Current note: {currentReviewFlag.note}
+                  </p>
                 )}
+              </section>
+            )}
 
             <div className="flashcard-footer">
-                <span>
+              <span>
                 Card {safeCurrentIndex + 1} of {visibleTerms.length}
-                </span>
+              </span>
 
-                <span>
+              <span>
                 Shortcuts: <kbd>S</kbd> show | <kbd>→</kbd> next
-                </span>
+              </span>
             </div>
-            </>
-        ) : (
+          </>
+        ) : null}
+
+        {!isLoadingTerms &&
+          !termsError &&
+          selectedSubject &&
+          visibleTerms.length === 0 && (
             <p>No flashcards found for this subject.</p>
-        )}
-        </section>
+          )}
+      </section>
     </div>
-    );
-    }
+  );
+}
