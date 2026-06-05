@@ -10,7 +10,9 @@ import { Layout } from "./components/Layout";
 import { HomePage } from "./pages/HomePage";
 import { NewsPage } from "./pages/NewsPage";
 import { CmsDashboard } from "./pages/CmsDashboard";
-import { CmsArticles } from "./pages/CmsArticles";
+import { CmsTermsPage } from "./pages/CmsTermsPage";
+import { CmsTermFormPage } from "./pages/CmsTermFormPage";
+import { CmsReviewPage } from "./pages/CmsReviewPage";
 
 const router = createBrowserRouter([
   {
@@ -30,8 +32,20 @@ const router = createBrowserRouter([
         element: <CmsDashboard />,
       },
       {
-        path: "cms/articles",
-        element: <CmsArticles />,
+        path: "cms/terms",
+        element: <CmsTermsPage />,
+      },
+      {
+        path: "cms/terms/new",
+        element: <CmsTermFormPage mode="new" />,
+      },
+      {
+        path: "cms/terms/:id/edit",
+        element: <CmsTermFormPage mode="edit" />,
+      },
+      {
+        path: "cms/review",
+        element: <CmsReviewPage />,
       },
     ],
   },
