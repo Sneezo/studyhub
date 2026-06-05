@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using StudyHub.Data;
 using StudyHub.Models;
+using Microsoft.AspNetCore.Server.IISIntegration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,12 +21,25 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
 
+builder.Services.AddAuthentication(IISDefaults.AuthenticationScheme);
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("CmsOnly", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+    });
+});
+
 var app = builder.Build();
 
 app.UseCors("FrontendDev");
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 using (var scope = app.Services.CreateScope())
 {
@@ -111,10 +125,22 @@ app.MapPost("/api/public/review-flags", async (
     return Results.Created($"/api/cms/review-flags/{reviewFlag.TermId}", response);
 });
 
+var cms = app.MapGroup("/api/cms")
+    .RequireAuthorization("CmsOnly");
+
+cms.MapGet("/me", (HttpContext context) =>
+{
+    return Results.Ok(new
+    {
+        isAuthenticated = context.User.Identity?.IsAuthenticated ?? false,
+        username = context.User.Identity?.Name
+    });
+});
+
 // CMS endpoints
 // Later we will protect these with Windows Authentication / AD.
 
-app.MapGet("/api/cms/terms", async (AppDbContext db) =>
+cms.MapGet("/terms", async (AppDbContext db) =>
 {
     var terms = await db.Terms
         .Include(term => term.TermSubjects)
@@ -124,7 +150,7 @@ app.MapGet("/api/cms/terms", async (AppDbContext db) =>
     return Results.Ok(terms.Select(ToDto));
 });
 
-app.MapGet("/api/cms/terms/{id:int}", async (int id, AppDbContext db) =>
+cms.MapGet("/terms/{id:int}", async (int id, AppDbContext db) =>
 {
     var term = await db.Terms
         .Include(term => term.TermSubjects)
@@ -135,7 +161,7 @@ app.MapGet("/api/cms/terms/{id:int}", async (int id, AppDbContext db) =>
         : Results.Ok(ToDto(term));
 });
 
-app.MapPost("/api/cms/terms", async (
+cms.MapPost("/terms", async (
     CreateTermRequest request,
     AppDbContext db) =>
 {
@@ -158,7 +184,7 @@ app.MapPost("/api/cms/terms", async (
     return Results.Created($"/api/cms/terms/{savedTerm.Id}", ToDto(savedTerm));
 });
 
-app.MapPut("/api/cms/terms/{id:int}", async (
+cms.MapPut("/terms/{id:int}", async (
     int id,
     UpdateTermRequest request,
     AppDbContext db) =>
@@ -184,7 +210,7 @@ app.MapPut("/api/cms/terms/{id:int}", async (
     return Results.Ok(ToDto(term));
 });
 
-app.MapDelete("/api/cms/terms/{id:int}", async (int id, AppDbContext db) =>
+cms.MapDelete("/terms/{id:int}", async (int id, AppDbContext db) =>
 {
     var term = await db.Terms
         .FirstOrDefaultAsync(term => term.Id == id);
@@ -200,7 +226,7 @@ app.MapDelete("/api/cms/terms/{id:int}", async (int id, AppDbContext db) =>
     return Results.NoContent();
 });
 
-app.MapGet("/api/cms/review-flags", async (AppDbContext db) =>
+cms.MapGet("/review-flags", async (AppDbContext db) =>
 {
     var flags = await db.ReviewFlags
         .OrderByDescending(flag => flag.CreatedAt)
@@ -217,7 +243,7 @@ app.MapGet("/api/cms/review-flags", async (AppDbContext db) =>
     return Results.Ok(flags);
 });
 
-app.MapDelete("/api/cms/review-flags/{termId:int}", async (
+cms.MapDelete("/review-flags/{termId:int}", async (
     int termId,
     AppDbContext db) =>
 {
