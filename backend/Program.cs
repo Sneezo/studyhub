@@ -24,6 +24,9 @@ var app = builder.Build();
 
 app.UseCors("FrontendDev");
 
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -228,6 +231,7 @@ app.MapDelete("/api/cms/review-flags/{termId:int}", async (
     return Results.NoContent();
 });
 
+app.MapFallbackToFile("index.html");
 app.Run();
 
 static TermDto ToDto(Term term)
