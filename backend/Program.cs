@@ -1,3 +1,7 @@
+using Microsoft.EntityFrameworkCore;
+using StudyHub.Data;
+using StudyHub.Models;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddCors(options =>
@@ -11,185 +15,263 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddDbContext<AppDbContext>(options =>
+{
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+});
+
 var app = builder.Build();
 
 app.UseCors("FrontendDev");
 
-var terms = new List<TermDto>
+using (var scope = app.Services.CreateScope())
 {
-    new(
-        1,
-        "DHCP",
-        new[] { "network", "windows-server" },
-        "Automatically gives devices IP configuration.",
-        "Dynamic Host Configuration Protocol is used to automatically assign IP addresses, subnet masks, default gateways and DNS servers to network clients."
-    ),
-    new(
-        2,
-        "DNS",
-        new[] { "network", "windows-server", "linux" },
-        "Translates names into IP addresses.",
-        "Domain Name System is the service that translates human-readable names like studyhub.local into IP addresses that computers can use."
-    ),
-    new(
-        3,
-        "Active Directory",
-        new[] { "windows-server" },
-        "Centralized identity and resource management.",
-        "Active Directory is Microsoft's directory service for managing users, computers, groups and policies in a Windows domain environment."
-    ),
-    new(
-        4,
-        "chmod",
-        new[] { "linux", "security" },
-        "Changes file permissions in Linux.",
-        "chmod is a Linux command used to change file and directory permissions, such as read, write and execute access."
-    ),
-    new(
-        5,
-        "SQL",
-        new[] { "databases" },
-        "Language used to work with relational databases.",
-        "Structured Query Language is used to create, read, update and delete data in relational database systems."
-    )
-};
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-var reviewFlags = new List<ReviewFlagDto>();
+    await db.Database.MigrateAsync();
+    await DbInitializer.SeedAsync(db);
+}
 
 app.MapGet("/", () => "StudyHub API is running");
 
 // Public endpoints
 
-app.MapGet("/api/public/terms", () =>
+app.MapGet("/api/public/terms", async (AppDbContext db) =>
 {
-    return Results.Ok(terms);
+    var terms = await db.Terms
+        .Include(term => term.TermSubjects)
+        .OrderBy(term => term.TermName)
+        .ToListAsync();
+
+    return Results.Ok(terms.Select(ToDto));
 });
 
-app.MapGet("/api/public/terms/by-tag/{tag}", (string tag) =>
+app.MapGet("/api/public/terms/by-tag/{tag}", async (string tag, AppDbContext db) =>
 {
-    var matchingTerms = terms
-        .Where(term => term.Tags.Contains(tag, StringComparer.OrdinalIgnoreCase))
-        .ToList();
+    var terms = await db.Terms
+        .Include(term => term.TermSubjects)
+        .Where(term => term.TermSubjects.Any(termSubject => termSubject.SubjectId == tag))
+        .OrderBy(term => term.TermName)
+        .ToListAsync();
 
-    return Results.Ok(matchingTerms);
+    return Results.Ok(terms.Select(ToDto));
 });
 
-app.MapPost("/api/public/review-flags", (CreateReviewFlagRequest request) =>
+app.MapPost("/api/public/review-flags", async (
+    CreateReviewFlagRequest request,
+    AppDbContext db) =>
 {
-    var term = terms.FirstOrDefault(term => term.Id == request.TermId);
+    var term = await db.Terms
+        .FirstOrDefaultAsync(term => term.Id == request.TermId);
 
     if (term is null)
     {
         return Results.NotFound(new { message = "Term not found." });
     }
 
-    var existingFlag = reviewFlags.FirstOrDefault(flag => flag.TermId == request.TermId);
+    var subjectExists = await db.Subjects
+        .AnyAsync(subject => subject.Id == request.SubjectId);
 
-    if (existingFlag is not null)
+    if (!subjectExists)
     {
-        reviewFlags.Remove(existingFlag);
+        return Results.BadRequest(new { message = "Subject not found." });
     }
 
-    var newFlag = new ReviewFlagDto(
-        request.TermId,
-        term.Term,
-        request.SubjectId,
-        request.Note,
-        DateTimeOffset.UtcNow,
-        "open"
+    var oldFlags = await db.ReviewFlags
+        .Where(flag => flag.TermId == request.TermId)
+        .ToListAsync();
+
+    db.ReviewFlags.RemoveRange(oldFlags);
+
+    var reviewFlag = new ReviewFlag
+    {
+        TermId = request.TermId,
+        SubjectId = request.SubjectId,
+        TermSnapshot = term.TermName,
+        Note = request.Note.Trim(),
+        Status = "open",
+        CreatedAt = DateTimeOffset.UtcNow
+    };
+
+    db.ReviewFlags.Add(reviewFlag);
+    await db.SaveChangesAsync();
+
+    var response = new ReviewFlagDto(
+        reviewFlag.TermId,
+        reviewFlag.TermSnapshot,
+        reviewFlag.SubjectId,
+        reviewFlag.Note,
+        reviewFlag.CreatedAt,
+        reviewFlag.Status
     );
 
-    reviewFlags.Add(newFlag);
-
-    return Results.Created($"/api/cms/review-flags/{newFlag.TermId}", newFlag);
+    return Results.Created($"/api/cms/review-flags/{reviewFlag.TermId}", response);
 });
 
 // CMS endpoints
+// Later we will protect these with Windows Authentication / AD.
 
-app.MapGet("/api/cms/terms", () =>
+app.MapGet("/api/cms/terms", async (AppDbContext db) =>
 {
-    return Results.Ok(terms);
+    var terms = await db.Terms
+        .Include(term => term.TermSubjects)
+        .OrderBy(term => term.TermName)
+        .ToListAsync();
+
+    return Results.Ok(terms.Select(ToDto));
 });
 
-app.MapGet("/api/cms/terms/{id:int}", (int id) =>
+app.MapGet("/api/cms/terms/{id:int}", async (int id, AppDbContext db) =>
 {
-    var term = terms.FirstOrDefault(term => term.Id == id);
+    var term = await db.Terms
+        .Include(term => term.TermSubjects)
+        .FirstOrDefaultAsync(term => term.Id == id);
 
     return term is null
         ? Results.NotFound(new { message = "Term not found." })
-        : Results.Ok(term);
+        : Results.Ok(ToDto(term));
 });
 
-app.MapPost("/api/cms/terms", (CreateTermRequest request) =>
+app.MapPost("/api/cms/terms", async (
+    CreateTermRequest request,
+    AppDbContext db) =>
 {
-    var nextId = terms.Count == 0
-        ? 1
-        : terms.Max(term => term.Id) + 1;
-
-    var newTerm = new TermDto(
-        nextId,
-        request.Term.Trim(),
-        request.Tags,
-        request.Description.Trim(),
-        request.Definition.Trim()
-    );
-
-    terms.Add(newTerm);
-
-    return Results.Created($"/api/cms/terms/{newTerm.Id}", newTerm);
-});
-
-app.MapPut("/api/cms/terms/{id:int}", (int id, UpdateTermRequest request) =>
-{
-    var existingTerm = terms.FirstOrDefault(term => term.Id == id);
-
-    if (existingTerm is null)
+    var term = new Term
     {
-        return Results.NotFound(new { message = "Term not found." });
-    }
-
-    var updatedTerm = existingTerm with
-    {
-        Term = request.Term.Trim(),
-        Tags = request.Tags,
+        TermName = request.Term.Trim(),
         Description = request.Description.Trim(),
         Definition = request.Definition.Trim()
     };
 
-    var index = terms.FindIndex(term => term.Id == id);
-    terms[index] = updatedTerm;
+    await AddTermSubjectsAsync(term, request.Tags, db);
 
-    return Results.Ok(updatedTerm);
+    db.Terms.Add(term);
+    await db.SaveChangesAsync();
+
+    var savedTerm = await db.Terms
+        .Include(item => item.TermSubjects)
+        .FirstAsync(item => item.Id == term.Id);
+
+    return Results.Created($"/api/cms/terms/{savedTerm.Id}", ToDto(savedTerm));
 });
 
-app.MapDelete("/api/cms/terms/{id:int}", (int id) =>
+app.MapPut("/api/cms/terms/{id:int}", async (
+    int id,
+    UpdateTermRequest request,
+    AppDbContext db) =>
 {
-    var existingTerm = terms.FirstOrDefault(term => term.Id == id);
+    var term = await db.Terms
+        .Include(term => term.TermSubjects)
+        .FirstOrDefaultAsync(term => term.Id == id);
 
-    if (existingTerm is null)
+    if (term is null)
     {
         return Results.NotFound(new { message = "Term not found." });
     }
 
-    terms.Remove(existingTerm);
-    reviewFlags.RemoveAll(flag => flag.TermId == id);
+    term.TermName = request.Term.Trim();
+    term.Description = request.Description.Trim();
+    term.Definition = request.Definition.Trim();
+
+    term.TermSubjects.Clear();
+    await AddTermSubjectsAsync(term, request.Tags, db);
+
+    await db.SaveChangesAsync();
+
+    return Results.Ok(ToDto(term));
+});
+
+app.MapDelete("/api/cms/terms/{id:int}", async (int id, AppDbContext db) =>
+{
+    var term = await db.Terms
+        .FirstOrDefaultAsync(term => term.Id == id);
+
+    if (term is null)
+    {
+        return Results.NotFound(new { message = "Term not found." });
+    }
+
+    db.Terms.Remove(term);
+    await db.SaveChangesAsync();
 
     return Results.NoContent();
 });
 
-app.MapGet("/api/cms/review-flags", () =>
+app.MapGet("/api/cms/review-flags", async (AppDbContext db) =>
 {
-    return Results.Ok(reviewFlags);
+    var flags = await db.ReviewFlags
+        .OrderByDescending(flag => flag.CreatedAt)
+        .Select(flag => new ReviewFlagDto(
+            flag.TermId,
+            flag.TermSnapshot,
+            flag.SubjectId,
+            flag.Note,
+            flag.CreatedAt,
+            flag.Status
+        ))
+        .ToListAsync();
+
+    return Results.Ok(flags);
 });
 
-app.MapDelete("/api/cms/review-flags/{termId:int}", (int termId) =>
+app.MapDelete("/api/cms/review-flags/{termId:int}", async (
+    int termId,
+    AppDbContext db) =>
 {
-    reviewFlags.RemoveAll(flag => flag.TermId == termId);
+    var flags = await db.ReviewFlags
+        .Where(flag => flag.TermId == termId)
+        .ToListAsync();
+
+    db.ReviewFlags.RemoveRange(flags);
+    await db.SaveChangesAsync();
 
     return Results.NoContent();
 });
 
 app.Run();
+
+static TermDto ToDto(Term term)
+{
+    return new TermDto(
+        term.Id,
+        term.TermName,
+        term.TermSubjects.Select(termSubject => termSubject.SubjectId).ToArray(),
+        term.Description,
+        term.Definition
+    );
+}
+
+static async Task AddTermSubjectsAsync(
+    Term term,
+    string[] tags,
+    AppDbContext db)
+{
+    var cleanedTags = tags
+        .Select(tag => tag.Trim().ToLowerInvariant())
+        .Where(tag => !string.IsNullOrWhiteSpace(tag))
+        .Distinct()
+        .ToArray();
+
+    foreach (var tag in cleanedTags)
+    {
+        var subjectExists = await db.Subjects.AnyAsync(subject => subject.Id == tag);
+
+        if (!subjectExists)
+        {
+            db.Subjects.Add(new Subject
+            {
+                Id = tag,
+                Name = tag,
+                Description = $"Auto-created subject/tag: {tag}"
+            });
+        }
+
+        term.TermSubjects.Add(new TermSubject
+        {
+            SubjectId = tag
+        });
+    }
+}
 
 public record TermDto(
     int Id,
