@@ -320,3 +320,9 @@ C:\inetpub\wwwroot\studyhub\backend\obj\Debug\net9.0\refint\backend.dll
 C:\inetpub\wwwroot\studyhub\backend\obj\Debug\net9.0\backend.pdb
 C:\inetpub\wwwroot\studyhub\backend\obj\Debug\net9.0\backend.genruntimeconfig.cache
 C:\inetpub\wwwroot\studyhub\backend\obj\Debug\net9.0\ref\backend.dll
+C:\inetpub\wwwroot\studyhub\backend\bin\Debug\net9.0\backend.staticwebassets.runtime.json
+C:\inetpub\wwwroot\studyhub\backend\obj\Debug\net9.0\compressed\6ui24jr7gp-kl19lhgcah.gz
+C:\inetpub\wwwroot\studyhub\backend\obj\Debug\net9.0\compressed\vujmarawy2-m4n3ye89ts.gz
+C:\inetpub\wwwroot\studyhub\backend\obj\Debug\net9.0\compressed\crim26a9px-180dmtdpho.gz
+C:\inetpub\wwwroot\studyhub\backend\obj\Debug\net9.0\compressed\1i5tv53yjl-gz8wlyv3qd.gz
+C:\inetpub\wwwroot\studyhub\backend\obj\Debug\net9.0\compressed\0yulyb0yu6-qo79s020fp.gz
