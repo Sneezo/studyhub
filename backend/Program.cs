@@ -3,6 +3,8 @@ using StudyHub.Data;
 using StudyHub.Models;
 using Microsoft.AspNetCore.Server.IISIntegration;
 
+const string CmsTeacherGroup = @"BLIX\StudyHubTeachers";
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddCors(options =>
@@ -25,9 +27,17 @@ builder.Services.AddAuthentication(IISDefaults.AuthenticationScheme);
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("CmsOnly", policy =>
+    options.AddPolicy("AuthenticatedOnly", policy =>
     {
         policy.RequireAuthenticatedUser();
+    });
+
+    options.AddPolicy("CmsOnly", policy =>
+    {
+        policy.RequireAssertion(context =>
+            context.User.Identity?.IsAuthenticated == true &&
+            context.User.IsInRole(CmsTeacherGroup)
+        );
     });
 });
 
@@ -128,14 +138,21 @@ app.MapPost("/api/public/review-flags", async (
 var cms = app.MapGroup("/api/cms")
     .RequireAuthorization("CmsOnly");
 
-cms.MapGet("/me", (HttpContext context) =>
+app.MapGet("/api/cms/me", (HttpContext context) =>
 {
     return Results.Ok(new
     {
         isAuthenticated = context.User.Identity?.IsAuthenticated ?? false,
-        username = context.User.Identity?.Name
+        username = context.User.Identity?.Name,
+        authenticationType = context.User.Identity?.AuthenticationType,
+        teacherGroup = CmsTeacherGroup,
+        isTeacher = context.User.IsInRole(CmsTeacherGroup)
     });
-});
+})
+.RequireAuthorization("AuthenticatedOnly");
+
+var cms = app.MapGroup("/api/cms")
+    .RequireAuthorization("CmsOnly");
 
 // CMS endpoints
 // Later we will protect these with Windows Authentication / AD.
