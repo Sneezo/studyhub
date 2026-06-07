@@ -3,29 +3,34 @@ import { Link } from "react-router-dom";
 import { getCmsReviewFlags, getCmsTerms } from "../api/studyHubApi";
 import type { Term } from "../data/terms";
 import type { ReviewFlag } from "../data/reviewFlagStorage";
+import { getCmsMe } from "../api/studyHubApi";
+import type { CmsMe } from "../api/studyHubApi";
 
 export function CmsDashboard() {
   const [terms, setTerms] = useState<Term[]>([]);
   const [reviewFlags, setReviewFlags] = useState<ReviewFlag[]>([]);
   const [error, setError] = useState("");
+  const [currentUser, setCurrentUser] = useState<CmsMe | null>(null);
 
   useEffect(() => {
     async function loadDashboard() {
-      try {
-        const [loadedTerms, loadedFlags] = await Promise.all([
-          getCmsTerms(),
-          getCmsReviewFlags(),
+        try {
+        const [loadedUser, loadedTerms, loadedFlags] = await Promise.all([
+            getCmsMe(),
+            getCmsTerms(),
+            getCmsReviewFlags(),
         ]);
 
+        setCurrentUser(loadedUser);
         setTerms(loadedTerms);
         setReviewFlags(loadedFlags);
-      } catch {
+        } catch {
         setError("Could not load CMS dashboard data.");
-      }
+        }
     }
 
     loadDashboard();
-  }, []);
+    }, []);
 
   const uniqueTags = useMemo(() => {
     return new Set(terms.flatMap((term) => term.tags));
@@ -37,6 +42,11 @@ export function CmsDashboard() {
         <div>
           <p className="eyebrow">Teacher CMS</p>
           <h2>StudyHub CMS</h2>
+          {currentUser && (
+            <p>
+                Logged in as <strong>{currentUser.username}</strong>
+            </p>
+            )}
           <p>Manage flashcards, definitions, tags and review feedback.</p>
         </div>
       </div>

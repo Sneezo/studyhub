@@ -3,17 +3,30 @@ import type { ReviewFlag } from "../data/reviewFlagStorage";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
+export type CmsMe = {
+  isAuthenticated: boolean;
+  username: string | null;
+  authenticationType: string | null;
+  teacherGroup: string;
+  isTeacher: boolean;
+};
+
+export async function getCmsMe(): Promise<CmsMe> {
+  return request<CmsMe>("/api/cms/me");
+}
+
 async function request<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
+    credentials: "include",
     headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
+        "Content-Type": "application/json",
+        ...options.headers,
     },
-  });
+    });
 
   if (!response.ok) {
     throw new Error(`API request failed: ${response.status}`);
