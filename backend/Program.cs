@@ -135,9 +135,6 @@ app.MapPost("/api/public/review-flags", async (
     return Results.Created($"/api/cms/review-flags/{reviewFlag.TermId}", response);
 });
 
-var cms = app.MapGroup("/api/cms")
-    .RequireAuthorization("CmsOnly");
-
 app.MapGet("/api/cms/me", (HttpContext context) =>
 {
     return Results.Ok(new
