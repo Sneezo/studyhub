@@ -13,7 +13,8 @@ function shuffleArray<T>(array: T[]): T[] {
 
 export function HomePage() {
   const [selectedClass, setSelectedClass] = useState<ClassFilter>("All");
-  const [selectedSubjectId, setSelectedSubjectId] = useState<string>("network");
+  const [selectedSubjectId, setSelectedSubjectId] =
+  useState<string>("windows-client");
 
   const [allTerms, setAllTerms] = useState<Term[]>([]);
   const [isLoadingTerms, setIsLoadingTerms] = useState(true);
