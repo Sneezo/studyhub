@@ -6,11 +6,18 @@ import {
   getCmsTerm,
   updateCmsTerm,
 } from "../api/studyHubApi";
+import { subjects } from "../data/subjects";
 import type { Term } from "../data/terms";
 
 type CmsTermFormPageProps = {
   mode: "new" | "edit";
 };
+
+const officialSubjectIds = subjects.map((subject) => subject.id);
+const officialSubjectIdSet = new Set(officialSubjectIds);
+
+const dsSubjects = subjects.filter((subject) => subject.classes.includes("DS"));
+const snSubjects = subjects.filter((subject) => subject.classes.includes("SN"));
 
 export function CmsTermFormPage({ mode }: CmsTermFormPageProps) {
   const navigate = useNavigate();
@@ -24,7 +31,8 @@ export function CmsTermFormPage({ mode }: CmsTermFormPageProps) {
   const [term, setTerm] = useState("");
   const [description, setDescription] = useState("");
   const [definition, setDefinition] = useState("");
-  const [tagsText, setTagsText] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [unknownTags, setUnknownTags] = useState<string[]>([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -40,7 +48,17 @@ export function CmsTermFormPage({ mode }: CmsTermFormPageProps) {
         setTerm(loadedTerm.term);
         setDescription(loadedTerm.description);
         setDefinition(loadedTerm.definition);
-        setTagsText(loadedTerm.tags.join(", "));
+
+        const knownTags = loadedTerm.tags.filter((tag) =>
+          officialSubjectIdSet.has(tag)
+        );
+
+        const oldUnknownTags = loadedTerm.tags.filter(
+          (tag) => !officialSubjectIdSet.has(tag)
+        );
+
+        setSelectedTags(knownTags);
+        setUnknownTags(oldUnknownTags);
       } catch {
         setError("Could not load term.");
       } finally {
@@ -51,21 +69,21 @@ export function CmsTermFormPage({ mode }: CmsTermFormPageProps) {
     loadTerm();
   }, [mode, termId]);
 
+  function handleTagToggle(tagId: string) {
+    setSelectedTags((previous) => {
+      if (previous.includes(tagId)) {
+        return previous.filter((id) => id !== tagId);
+      }
+
+      return [...previous, tagId];
+    });
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
 
-    const parsedTags = tagsText
-      .split(",")
-      .map((tag) => tag.trim().toLowerCase())
-      .filter(Boolean);
-
     if (!term.trim()) {
       setError("Term is required.");
-      return;
-    }
-
-    if (!description.trim()) {
-      setError("Description is required.");
       return;
     }
 
@@ -74,8 +92,8 @@ export function CmsTermFormPage({ mode }: CmsTermFormPageProps) {
       return;
     }
 
-    if (parsedTags.length === 0) {
-      setError("At least one tag is required.");
+    if (selectedTags.length === 0) {
+      setError("Choose at least one subject/tag.");
       return;
     }
 
@@ -85,7 +103,7 @@ export function CmsTermFormPage({ mode }: CmsTermFormPageProps) {
           term: term.trim(),
           description: description.trim(),
           definition: definition.trim(),
-          tags: parsedTags,
+          tags: selectedTags,
         });
       } else {
         if (!existingTerm) {
@@ -98,7 +116,7 @@ export function CmsTermFormPage({ mode }: CmsTermFormPageProps) {
           term: term.trim(),
           description: description.trim(),
           definition: definition.trim(),
-          tags: parsedTags,
+          tags: selectedTags,
         });
       }
 
@@ -133,8 +151,8 @@ export function CmsTermFormPage({ mode }: CmsTermFormPageProps) {
           <p className="eyebrow">CMS</p>
           <h2>{mode === "new" ? "Create new term" : "Edit term"}</h2>
           <p>
-            Tags connect the term to subjects, for example network, linux or
-            security.
+            Choose one or more official subjects. These are the subjects that
+            appear on the public flashcard page.
           </p>
         </div>
       </div>
@@ -156,7 +174,7 @@ export function CmsTermFormPage({ mode }: CmsTermFormPageProps) {
           <input
             value={description}
             onChange={(event) => setDescription(event.target.value)}
-            placeholder="Example: Automatically gives devices IP configuration."
+            placeholder="Optional. Leave blank if it gives away too much."
           />
         </label>
 
@@ -170,14 +188,59 @@ export function CmsTermFormPage({ mode }: CmsTermFormPageProps) {
           />
         </label>
 
-        <label>
-          Tags
-          <input
-            value={tagsText}
-            onChange={(event) => setTagsText(event.target.value)}
-            placeholder="network, windows-server"
-          />
-        </label>
+        <div className="tag-picker">
+          <div className="tag-picker-header">
+            <h3>Subjects / tags</h3>
+            <p>
+              A term only appears publicly if it has one of these official tags.
+            </p>
+          </div>
+
+          {unknownTags.length > 0 && (
+            <p className="form-warning">
+              This term has old/unknown tags: {unknownTags.join(", ")}. Saving
+              will remove them unless they are added as official subjects.
+            </p>
+          )}
+
+          <div className="tag-picker-grid">
+            <div className="tag-picker-group">
+              <h4>DS</h4>
+
+              {dsSubjects.map((subject) => (
+                <label key={subject.id} className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={selectedTags.includes(subject.id)}
+                    onChange={() => handleTagToggle(subject.id)}
+                  />
+                  <span>
+                    <strong>{subject.name}</strong>
+                    <small>{subject.id}</small>
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            <div className="tag-picker-group">
+              <h4>SN</h4>
+
+              {snSubjects.map((subject) => (
+                <label key={subject.id} className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={selectedTags.includes(subject.id)}
+                    onChange={() => handleTagToggle(subject.id)}
+                  />
+                  <span>
+                    <strong>{subject.name}</strong>
+                    <small>{subject.id}</small>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
 
         <div className="form-actions">
           <button type="submit">
