@@ -190,9 +190,24 @@ cms.MapPost("/terms", async (
     CreateTermRequest request,
     AppDbContext db) =>
 {
+    var cleanedTermName = request.Term.Trim();
+
+    var existingTerm = await db.Terms
+        .Include(term => term.TermSubjects)
+        .FirstOrDefaultAsync(term => term.TermName == cleanedTermName);
+
+    if (existingTerm is not null)
+    {
+        return Results.Conflict(new
+        {
+            message = $"The term '{cleanedTermName}' already exists.",
+            existingTermId = existingTerm.Id
+        });
+    }
+
     var term = new Term
     {
-        TermName = request.Term.Trim(),
+        TermName = cleanedTermName,
         Description = request.Description.Trim(),
         Definition = request.Definition.Trim()
     };

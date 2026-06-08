@@ -11,9 +11,23 @@ export type CmsMe = {
   isTeacher: boolean;
 };
 
+export class ApiError extends Error {
+  status: number;
+  data: unknown;
+
+  constructor(status: number, data: unknown, message: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.data = data;
+  }
+}
+
 export async function getCmsMe(): Promise<CmsMe> {
   return request<CmsMe>("/api/cms/me");
 }
+
+
 
 async function request<T>(
   path: string,
@@ -23,13 +37,29 @@ async function request<T>(
     ...options,
     credentials: "include",
     headers: {
-        "Content-Type": "application/json",
-        ...options.headers,
+      "Content-Type": "application/json",
+      ...options.headers,
     },
-    });
+  });
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status}`);
+    let errorData: unknown = null;
+
+    try {
+      errorData = await response.json();
+    } catch {
+      errorData = await response.text();
+    }
+
+    const message =
+      typeof errorData === "object" &&
+      errorData !== null &&
+      "message" in errorData &&
+      typeof errorData.message === "string"
+        ? errorData.message
+        : `API request failed: ${response.status}`;
+
+    throw new ApiError(response.status, errorData, message);
   }
 
   if (response.status === 204) {

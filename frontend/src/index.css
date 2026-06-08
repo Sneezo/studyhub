@@ -694,3 +694,12 @@ kbd {
     grid-template-columns: 1fr;
   }
 }
+
+.form-error p {
+  margin: 0 0 0.5rem 0;
+}
+
+.form-error a {
+  color: inherit;
+  font-weight: 700;
+}

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
+  ApiError,
   createCmsTerm,
   getCmsTerm,
   updateCmsTerm,
@@ -28,6 +29,7 @@ export function CmsTermFormPage({ mode }: CmsTermFormPageProps) {
   const [existingTerm, setExistingTerm] = useState<Term | null>(null);
   const [isLoading, setIsLoading] = useState(mode === "edit");
 
+  const [duplicateTermId, setDuplicateTermId] = useState<number | null>(null);
   const [term, setTerm] = useState("");
   const [description, setDescription] = useState("");
   const [definition, setDefinition] = useState("");
@@ -81,6 +83,8 @@ export function CmsTermFormPage({ mode }: CmsTermFormPageProps) {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    setDuplicateTermId(null);
+    setError("");
 
     if (!term.trim()) {
       setError("Term is required.");
@@ -121,9 +125,20 @@ export function CmsTermFormPage({ mode }: CmsTermFormPageProps) {
       }
 
       navigate("/cms/terms");
-    } catch {
-      setError("Could not save term.");
-    }
+    } catch (error) {
+  if (error instanceof ApiError && error.status === 409) {
+    const errorData = error.data as {
+      message?: string;
+      existingTermId?: number;
+    };
+
+    setError(errorData.message ?? "This term already exists.");
+    setDuplicateTermId(errorData.existingTermId ?? null);
+    return;
+  }
+
+  setError("Could not save term.");
+}
   }
 
   if (isLoading) {
@@ -158,7 +173,17 @@ export function CmsTermFormPage({ mode }: CmsTermFormPageProps) {
       </div>
 
       <form className="cms-form" onSubmit={handleSubmit}>
-        {error && <p className="form-error">{error}</p>}
+        {error && (
+  <div className="form-error">
+    <p>{error}</p>
+
+    {duplicateTermId && (
+      <Link to={`/cms/terms/${duplicateTermId}/edit`}>
+        Edit existing term instead
+      </Link>
+    )}
+  </div>
+)}
 
         <label>
           Term
