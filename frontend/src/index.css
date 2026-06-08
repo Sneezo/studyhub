@@ -703,3 +703,336 @@ kbd {
   color: inherit;
   font-weight: 700;
 }
+
+/* Eccera / IT Academy color theme */
+
+:root {
+  --eccera-black: #111417;
+  --eccera-black-soft: #1b1f23;
+  --eccera-orange: #e65a2a;
+  --eccera-orange-dark: #c94a20;
+  --eccera-orange-soft: #fff1eb;
+
+  --eccera-bg: #ffffff;
+  --eccera-page-bg: #f7f7f7;
+  --eccera-surface: #ffffff;
+  --eccera-surface-muted: #fafafa;
+
+  --eccera-heading: #15191d;
+  --eccera-text: #5f6875;
+  --eccera-text-dark: #22262b;
+  --eccera-muted: #7b8490;
+
+  --eccera-border: #e4e4e4;
+  --eccera-border-strong: #cfcfcf;
+
+  --eccera-error-bg: #fff3f3;
+  --eccera-error-border: #d8a0a0;
+  --eccera-warning-bg: #fff8df;
+  --eccera-warning-border: #d6b85a;
+}
+
+/* Global */
+
+body {
+  background: var(--eccera-page-bg);
+  color: var(--eccera-text);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  color: var(--eccera-heading);
+}
+
+a {
+  color: var(--eccera-orange);
+}
+
+a:hover {
+  color: var(--eccera-orange-dark);
+}
+
+/* Header */
+
+.site-header {
+  background: var(--eccera-black);
+  color: #ffffff;
+}
+
+.site-header h1 {
+  color: #ffffff;
+}
+
+.site-header h1::after {
+  content: " | IT Academy";
+  color: var(--eccera-orange);
+  font-weight: 500;
+}
+
+.site-header nav a {
+  color: #ffffff;
+}
+
+.site-header nav a:hover {
+  color: var(--eccera-orange);
+}
+
+/* Main surface */
+
+.site-main {
+  background: var(--eccera-surface);
+  color: var(--eccera-text);
+}
+
+/* Eyebrow / small labels */
+
+.eyebrow {
+  color: var(--eccera-orange);
+}
+
+/* Sidebar */
+
+.subject-panel {
+  border-right-color: var(--eccera-border);
+}
+
+.subject-panel h2 {
+  color: var(--eccera-heading);
+}
+
+.class-filter-buttons button,
+.subject-list button {
+  border-color: var(--eccera-border-strong);
+  background: #ffffff;
+  color: var(--eccera-text-dark);
+}
+
+.class-filter-buttons button:hover,
+.subject-list button:hover {
+  border-color: var(--eccera-orange);
+  color: var(--eccera-orange);
+}
+
+.class-filter-buttons button.active,
+.subject-list button.active {
+  background: var(--eccera-black);
+  color: #ffffff;
+  border-color: var(--eccera-black);
+}
+
+/* Flashcard controls */
+
+.flashcard-controls select,
+.flashcard-controls button {
+  border-color: var(--eccera-border-strong);
+  background: #ffffff;
+  color: var(--eccera-text-dark);
+}
+
+.flashcard-controls button:hover,
+.flashcard-controls select:hover {
+  border-color: var(--eccera-orange);
+  color: var(--eccera-orange);
+  background: var(--eccera-orange-soft);
+}
+
+.flashcard-controls button.review-active {
+  background: var(--eccera-orange);
+  border-color: var(--eccera-orange);
+  color: #ffffff;
+}
+
+/* Progress */
+
+.flashcard-progress {
+  background: #eeeeee;
+}
+
+.flashcard-progress-fill {
+  background: var(--eccera-orange);
+}
+
+/* Flashcard */
+
+.study-card {
+  background: #ffffff;
+  border-color: var(--eccera-border);
+  box-shadow: 0 10px 28px rgba(17, 20, 23, 0.08);
+}
+
+.study-card h3 {
+  color: var(--eccera-heading);
+}
+
+.term-description {
+  color: var(--eccera-text);
+}
+
+.answer-hint {
+  color: var(--eccera-muted);
+}
+
+.answer-section {
+  color: var(--eccera-text);
+}
+
+.tag-list span {
+  background: var(--eccera-orange-soft);
+  color: var(--eccera-orange-dark);
+}
+
+/* Keyboard shortcut keys */
+
+kbd {
+  background: #ffffff;
+  border-color: var(--eccera-border-strong);
+  color: var(--eccera-text-dark);
+}
+
+/* CMS cards and panels */
+
+.cms-card,
+.review-panel,
+.empty-state,
+.review-item,
+.tag-picker,
+.content-card {
+  background: var(--eccera-surface-muted);
+  border-color: var(--eccera-border);
+}
+
+.cms-card:hover {
+  background: var(--eccera-orange-soft);
+  border-color: var(--eccera-orange);
+}
+
+.cms-card-number {
+  color: var(--eccera-orange);
+}
+
+.cms-header h2,
+.cms-card h3,
+.review-item h3,
+.tag-picker h3,
+.tag-picker h4 {
+  color: var(--eccera-heading);
+}
+
+/* Tables */
+
+.cms-table th {
+  background: var(--eccera-surface-muted);
+  color: var(--eccera-heading);
+}
+
+.cms-table th,
+.cms-table td {
+  border-bottom-color: var(--eccera-border);
+}
+
+/* Inputs */
+
+.cms-filters input,
+.cms-filters select,
+.cms-form input,
+.cms-form textarea,
+.review-panel textarea {
+  border-color: var(--eccera-border-strong);
+  background: #ffffff;
+  color: var(--eccera-text-dark);
+}
+
+.cms-filters input:focus,
+.cms-filters select:focus,
+.cms-form input:focus,
+.cms-form textarea:focus,
+.review-panel textarea:focus {
+  outline: 2px solid var(--eccera-orange-soft);
+  border-color: var(--eccera-orange);
+}
+
+/* Primary buttons / links */
+
+.primary-link,
+.form-actions button,
+.review-actions button,
+.review-item-actions a,
+.table-actions a {
+  background: var(--eccera-orange);
+  border-color: var(--eccera-orange);
+  color: #ffffff;
+}
+
+.primary-link:hover,
+.form-actions button:hover,
+.review-actions button:hover,
+.review-item-actions a:hover,
+.table-actions a:hover {
+  background: var(--eccera-orange-dark);
+  border-color: var(--eccera-orange-dark);
+  color: #ffffff;
+}
+
+/* Secondary/destructive table buttons */
+
+.table-actions button,
+.review-item-actions button {
+  background: #ffffff;
+  color: var(--eccera-text-dark);
+  border-color: var(--eccera-border-strong);
+}
+
+.table-actions button:hover,
+.review-item-actions button:hover {
+  background: var(--eccera-orange-soft);
+  color: var(--eccera-orange-dark);
+  border-color: var(--eccera-orange);
+}
+
+/* Checkbox tag picker */
+
+.cms-form label.checkbox-label {
+  background: #ffffff;
+  border-color: var(--eccera-border);
+}
+
+.cms-form label.checkbox-label:hover {
+  background: var(--eccera-orange-soft);
+  border-color: var(--eccera-orange);
+}
+
+.checkbox-label small {
+  color: var(--eccera-muted);
+}
+
+/* Feedback messages */
+
+.form-error {
+  background: var(--eccera-error-bg);
+  border-color: var(--eccera-error-border);
+  color: var(--eccera-heading);
+}
+
+.form-warning {
+  background: var(--eccera-warning-bg);
+  border-color: var(--eccera-warning-border);
+  color: var(--eccera-heading);
+}
+
+.review-badge {
+  border-color: var(--eccera-orange);
+  background: var(--eccera-orange-soft);
+  color: var(--eccera-orange-dark);
+}
+
+.review-count {
+  color: var(--eccera-muted);
+}
+
+.flashcard-footer,
+.review-date,
+.existing-review-note {
+  color: var(--eccera-muted);
+}
