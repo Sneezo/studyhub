@@ -70,7 +70,7 @@ using (var scope = app.Services.CreateScope())
     await DbInitializer.SeedAsync(db);
 }
 
-app.MapGet("/", () => "StudyHub API is running");
+app.MapGet("/api/health", () => "StudyHub API is running");
 
 // Public endpoints
 
@@ -297,14 +297,13 @@ app.MapGet("/api/debug/static-files", () =>
 
 app.MapFallback(async context =>
 {
-    var indexPath = Path.Combine(webRootPath, "index.html");
-
-    if (!System.IO.File.Exists(indexPath))
+    if (context.Request.Path.StartsWithSegments("/api"))
     {
         context.Response.StatusCode = StatusCodes.Status404NotFound;
-        await context.Response.WriteAsync($"index.html not found at {indexPath}");
         return;
     }
+
+    var indexPath = Path.Combine(webRootPath, "index.html");
 
     context.Response.ContentType = "text/html";
     await context.Response.SendFileAsync(indexPath);
