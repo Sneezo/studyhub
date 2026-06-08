@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using StudyHub.Data;
 using StudyHub.Models;
 using Microsoft.AspNetCore.Server.IISIntegration;
+using Microsoft.Extensions.FileProviders;
 
 const string CmsTeacherGroup = @"BLIX\StudyHubTeachers";
 
@@ -45,9 +46,18 @@ builder.Services.AddAuthorization(options =>
 var app = builder.Build();
 
 app.UseCors("FrontendDev");
+|
+var webRootPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
 
-app.UseDefaultFiles();
-app.UseStaticFiles();
+app.UseDefaultFiles(new DefaultFilesOptions
+{
+    FileProvider = new PhysicalFileProvider(webRootPath)
+});
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(webRootPath)
+});
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -272,7 +282,34 @@ cms.MapDelete("/review-flags/{termId:int}", async (
     return Results.NoContent();
 });
 
-app.MapFallbackToFile("index.html");
+app.MapGet("/api/debug/static-files", () =>
+{
+    var indexPath = Path.Combine(webRootPath, "index.html");
+
+    return Results.Ok(new
+    {
+        contentRootPath = app.Environment.ContentRootPath,
+        webRootPath,
+        indexPath,
+        indexExists = System.IO.File.Exists(indexPath)
+    });
+});
+
+app.MapFallback(async context =>
+{
+    var indexPath = Path.Combine(webRootPath, "index.html");
+
+    if (!System.IO.File.Exists(indexPath))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        await context.Response.WriteAsync($"index.html not found at {indexPath}");
+        return;
+    }
+
+    context.Response.ContentType = "text/html";
+    await context.Response.SendFileAsync(indexPath);
+});
+
 app.Run();
 
 static TermDto ToDto(Term term)
