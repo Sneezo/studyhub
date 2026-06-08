@@ -46,7 +46,7 @@ builder.Services.AddAuthorization(options =>
 var app = builder.Build();
 
 app.UseCors("FrontendDev");
-|
+
 var webRootPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
 
 app.UseDefaultFiles(new DefaultFilesOptions
