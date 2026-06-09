@@ -8,10 +8,10 @@ export function Layout() {
 
         <nav>
           <Link to="/">Home</Link>
-          <Link to="/cms">CMS</Link>
           <a href="/fsmo.html" target="_blank" rel="noreferrer">
             FSMO
           </a>
+          <Link to="/cms">CMS</Link>
         </nav>
       </header>
 
