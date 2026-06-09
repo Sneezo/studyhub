@@ -113,7 +113,7 @@ export function CmsTermsPage() {
                 <td>
                   <div className="tag-list compact">
                     {term.tags.map((tag) => (
-                      <span key={tag}>{tag}</span>
+                      <span key={tag}>{tag} </span>
                     ))}
                   </div>
                 </td>
