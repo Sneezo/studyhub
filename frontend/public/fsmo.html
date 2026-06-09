@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<!-- saved from url=(0014)about:internet -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FSMO Role Flashcards</title>
+  <style>
+    :root {
+      --bg: #000000;
+      --card: #111111;
+      --muted: #aaaaaa;
+      --text: #ffffff;
+      --accent: #e46320;
+      --good: #2ecc71;
+      --bad: #ff6b6b;
+      --warn: #ffd166;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 28px 16px;
+    }
+
+    .app {
+      width: min(100%, 900px);
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      font-size: clamp(20px, 3vw, 28px);
+      margin: 0;
+      letter-spacing: .3px;
+      color: var(--accent);
+    }
+
+    .controls { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    button, .btn {
+      appearance: none;
+      border: 1px solid #333;
+      background: #000;
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: transform .05s ease, border-color .2s ease, background .2s ease, opacity .2s ease;
+    }
+    button:hover { border-color: var(--accent); color: var(--accent); }
+    button:active { transform: translateY(1px); }
+    button[disabled] { opacity: .6; cursor: not-allowed; }
+
+    .deck {
+      background: #0d0d0d;
+      border: 1px solid #222;
+      border-radius: 18px;
+      padding: 18px;
+      display: grid;
+      gap: 16px;
+      box-shadow: 0 20px 40px rgba(0,0,0,.65);
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px 12px;
+      align-items: center;
+    }
+
+    .progress {
+      position: relative;
+      height: 10px;
+      background: #222;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid #333;
+    }
+    .bar {
+      position: absolute; inset: 0 100% 0 0; background: var(--accent);
+      transition: inset .4s ease;
+    }
+    .stats { color: var(--muted); font-size: 14px; }
+
+    .card {
+      padding: 18px;
+      border-radius: 14px;
+      border: 1px dashed #333;
+      background: #000;
+    }
+
+    .prompt { font-size: clamp(18px, 2.4vw, 22px); line-height: 1.4; color: var(--accent); }
+    .hint { color: var(--muted); font-size: 14px; margin-top: 6px; }
+
+    .roles {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }
+
+    .role {
+      display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 12px;
+      border: 1px solid #333; background: #0d0d0d; cursor: pointer; user-select: none;
+      transition: border-color .2s ease, background .2s ease;
+    }
+    .role input { display: none; }
+    .role .check {
+      width: 18px; height: 18px; border-radius: 6px; border: 2px solid #444; display: grid; place-items: center; font-size: 14px; line-height: 1; min-width: 18px;
+      transition: border-color .2s ease, background .2s ease, color .2s ease;
+    }
+    .role.selected { border-color: var(--accent); background: #1a1a1a; }
+    .role.selected .check { background: var(--accent); border-color: var(--accent); color: #000; }
+
+    .feedback {
+      padding: 12px 14px; border-radius: 12px; border: 1px solid #333; background: #0d0d0d; display: none;
+    }
+    .feedback.show { display: block; }
+    .feedback.correct { border-color: rgba(46, 204, 113, .5); background: rgba(46, 204, 113, .08); }
+    .feedback.incorrect { border-color: rgba(255, 107, 107, .5); background: rgba(255, 107, 107, .08); }
+
+    .footer { display: flex; gap: 10px; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+    .left, .right { display: flex; gap: 10px; align-items: center; }
+
+    .pill { font-size: 12px; padding: 6px 10px; border-radius: 999px; border: 1px solid #333; color: var(--muted); }
+
+    .answer-key { font-size: 14px; }
+    .answer-key .tag { display: inline-block; margin-right: 6px; margin-bottom: 6px; padding: 4px 8px; border-radius: 999px; border: 1px solid #333; }
+
+    .marking .role.correct { border-color: var(--good); }
+    .marking .role.incorrect { border-color: var(--bad); }
+    .marking .role.missed { border-color: var(--warn); }
+
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>FSMO Role Flashcards</h1>
+      <div class="controls">
+        <button id="btn-shuffle" title="Shuffle the deck">Shuffle</button>
+        <button id="btn-reset" title="Reset progress">Reset</button>
+      </div>
+    </header>
+
+    <section class="deck" aria-live="polite">
+      <div class="meta">
+        <div class="progress" aria-label="Progress">
+          <div id="progress-bar" class="bar" style="inset: 0px 100% 0px 0px;"></div>
+        </div>
+        <div class="stats" id="stats">0 / 12 correct</div>
+      </div>
+
+      <article class="card" id="card">
+        <div class="prompt" id="prompt">Issues RID blocks so domain controllers can create new user/computer/group objects.</div>
+        <div class="hint" id="hint">Select all roles for which this statement is true.</div>
+      </article>
+
+      <div class="roles" id="roles"><label class="role" data-role="Schema Master" tabindex="0" role="checkbox" aria-checked="false"><input type="checkbox" class="sr-only" aria-label="Schema Master"><span class="check"></span><span>Schema Master</span></label><label class="role" data-role="Domain Naming Master" tabindex="0" role="checkbox" aria-checked="false"><input type="checkbox" class="sr-only" aria-label="Domain Naming Master"><span class="check"></span><span>Domain Naming Master</span></label><label class="role" data-role="PDC Emulator" tabindex="0" role="checkbox" aria-checked="false"><input type="checkbox" class="sr-only" aria-label="PDC Emulator"><span class="check"></span><span>PDC Emulator</span></label><label class="role" data-role="RID Master" tabindex="0" role="checkbox" aria-checked="false"><input type="checkbox" class="sr-only" aria-label="RID Master"><span class="check"></span><span>RID Master</span></label><label class="role" data-role="Infrastructure Master" tabindex="0" role="checkbox" aria-checked="false"><input type="checkbox" class="sr-only" aria-label="Infrastructure Master"><span class="check"></span><span>Infrastructure Master</span></label></div>
+
+      <div id="feedback" class="feedback" role="status"></div>
+
+      <div class="footer">
+        <div class="left">
+          <span class="pill" id="question-count">Card 1 of 12</span>
+        </div>
+        <div class="right">
+          <button id="btn-show">Show Answer</button>
+          <button id="btn-submit">Check</button>
+          <button id="btn-next" style="display:none">Next ▶</button>
+        </div>
+      </div>
+    </section>
+
+    <p class="hint" style="margin-top:12px">Tip: some statements have multiple correct roles.</p>
+  </div>
+
+  <script>
+    // --- Deck data ----------------------------------------------------------
+    const ROLES = [
+      "Schema Master",
+      "Domain Naming Master",
+      "PDC Emulator",
+      "RID Master",
+      "Infrastructure Master",
+    ];
+
+    /** Each card: { statement, correct: [roles], explanation } */
+    const DECK = [
+      {
+        statement: "Holds the only writable copy of the forest schema and authorizes schema changes.",
+        correct: ["Schema Master"],
+        explanation: "Only the forest-wide Schema Master can accept schema updates (e.g., adding attributes/classes).",
+      },
+      {
+        statement: "Authorizes additions or removals of domains and application partitions in the forest.",
+        correct: ["Domain Naming Master"],
+        explanation: "Domain Naming Master is a forest-wide role that must be online to add/remove domains.",
+      },
+      {
+        statement: "Primary time source for the domain and the default target for password changes and account lockouts.",
+        correct: ["PDC Emulator"],
+        explanation: "The PDC Emulator handles preferential password updates, account lockouts, and is the domain's time authority.",
+      },
+      {
+        statement: "Allocates RID pools to domain controllers so they can create new security principals (SIDs).",
+        correct: ["RID Master"],
+        explanation: "RID Master issues unique RID blocks so DCs can create objects without SID conflicts.",
+      },
+      {
+        statement: "Maintains cross-domain references (phantoms) and updates group-to-user links when objects move between domains.",
+        correct: ["Infrastructure Master"],
+        explanation: "Infrastructure Master updates references to objects in other domains to keep group memberships accurate.",
+      },
+      {
+        statement: "Forest-wide roles (select all that apply).",
+        correct: ["Schema Master", "Domain Naming Master"],
+        explanation: "There is one Schema Master and one Domain Naming Master per forest.",
+      },
+      {
+        statement: "Per-domain roles (select all that apply).",
+        correct: ["PDC Emulator", "RID Master", "Infrastructure Master"],
+        explanation: "PDC Emulator, RID Master, and Infrastructure Master exist once per domain.",
+      },
+      {
+        statement: "Must be online to rename a domain in the forest.",
+        correct: ["Domain Naming Master"],
+        explanation: "Domain rename operations require the Domain Naming Master.",
+      },
+      {
+        statement: "Emulates legacy PDC behavior for NT4-era compatibility and some operations.",
+        correct: ["PDC Emulator"],
+        explanation: "The PDC Emulator provides backward compat and certain domain-wide functions.",
+      },
+      {
+        statement: "In multi-domain forests, typically should not be on a Global Catalog server (unless all DCs are GCs).",
+        correct: ["Infrastructure Master"],
+        explanation: "Traditional guidance: Infra Master shouldn't be a GC in multi-domain forests, because it needs to detect out-of-date references; it's fine if all DCs are GCs or in single-domain forests.",
+      },
+      {
+        statement: "Required when extending the directory with new attributes or classes.",
+        correct: ["Schema Master"],
+        explanation: "Schema extensions (e.g., for Exchange) require the Schema Master.",
+      },
+      {
+        statement: "Issues RID blocks so domain controllers can create new user/computer/group objects.",
+        correct: ["RID Master"],
+        explanation: "Without RID pools from the RID Master, new security principals can't be created once local pools are exhausted.",
+      },
+    ];
+
+    // --- State --------------------------------------------------------------
+    let order = [...Array(DECK.length).keys()];
+    let idx = 0; // index into order
+    let selected = new Set();
+    let correctCount = 0;
+
+    // --- Elements -----------------------------------------------------------
+    const rolesEl = document.getElementById('roles');
+    const promptEl = document.getElementById('prompt');
+    const feedbackEl = document.getElementById('feedback');
+    const statsEl = document.getElementById('stats');
+    const qCountEl = document.getElementById('question-count');
+    const barEl = document.getElementById('progress-bar');
+    const btnSubmit = document.getElementById('btn-submit');
+    const btnNext = document.getElementById('btn-next');
+    const btnReset = document.getElementById('btn-reset');
+    const btnShuffle = document.getElementById('btn-shuffle');
+    const btnShow = document.getElementById('btn-show');
+    const deckEl = document.querySelector('.deck');
+
+    // --- Helpers ------------------------------------------------------------
+    const shuffle = (arr) => arr.sort(() => Math.random() - 0.5);
+
+    function render() {
+      const card = DECK[order[idx]];
+      promptEl.textContent = card.statement;
+      feedbackEl.className = 'feedback';
+      feedbackEl.textContent = '';
+      rolesEl.innerHTML = '';
+      deckEl.classList.remove('marking');
+      selected.clear();
+
+      ROLES.forEach(role => {
+        const label = document.createElement('label');
+        label.className = 'role';
+        label.dataset.role = role; // avoid textContent parsing
+        label.setAttribute('tabindex', '0');
+        label.setAttribute('role', 'checkbox');
+        label.setAttribute('aria-checked', 'false');
+
+        // Hidden native checkbox for accessibility
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.className = 'sr-only';
+        input.setAttribute('aria-label', role);
+
+        const box = document.createElement('span');
+        box.className = 'check';
+        box.textContent = '';
+
+        const txt = document.createElement('span');
+        txt.textContent = role;
+
+        function toggleHandler() { toggle(role, label, input, box); }
+        label.addEventListener('click', (e) => { e.preventDefault(); toggleHandler(); });
+        label.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleHandler(); }
+        });
+
+        label.append(input, box, txt);
+        rolesEl.appendChild(label);
+      });
+
+      updateMeta();
+      btnNext.style.display = 'none';
+      btnSubmit.disabled = false;
+      btnShow.disabled = false;
+    }
+
+    function toggle(role, label, input, box) {
+      if (btnSubmit.disabled) return; // locked after checking
+      if (selected.has(role)) {
+        selected.delete(role);
+        label.classList.remove('selected');
+        label.classList.remove('correct', 'incorrect', 'missed');
+        label.setAttribute('aria-checked', 'false');
+        input.checked = false;
+        box.textContent = '';
+      } else {
+        selected.add(role);
+        label.classList.add('selected');
+        label.setAttribute('aria-checked', 'true');
+        input.checked = true;
+        box.textContent = '✓';
+      }
+    }
+
+    function check() {
+      const card = DECK[order[idx]];
+      const correct = new Set(card.correct);
+      const chosen = new Set(selected);
+
+      // Mark roles visually
+      deckEl.classList.add('marking');
+      document.querySelectorAll('.role').forEach(el => {
+        const role = el.dataset.role;
+        el.classList.remove('correct', 'incorrect', 'missed', 'selected');
+        const isChosen = chosen.has(role);
+        const isCorrect = correct.has(role);
+        if (isChosen && isCorrect) el.classList.add('correct');
+        if (isChosen && !isCorrect) el.classList.add('incorrect');
+        if (!isChosen && isCorrect) el.classList.add('missed');
+        el.setAttribute('aria-checked', isChosen ? 'true' : 'false');
+        const box = el.querySelector('.check');
+        box.textContent = isChosen ? '✓' : '';
+      });
+
+      const allCorrect = setsEqual(chosen, correct);
+      if (allCorrect) correctCount++;
+
+      feedbackEl.classList.add('show', allCorrect ? 'correct' : 'incorrect');
+      feedbackEl.innerHTML = allCorrect
+        ? `✅ Correct! <span class="answer-key">(${[...correct].join(', ')})</span><br>${card.explanation}`
+        : `❌ Not quite. <div class="answer-key">Correct: ${card.correct.map(r => `<span class='tag'>${r}</span>`).join('')} </div><div style="margin-top:6px">${card.explanation}</div>`;
+
+      btnSubmit.disabled = true;
+      btnShow.disabled = true;
+      btnNext.style.display = 'inline-block';
+      updateMeta();
+    }
+
+    function showAnswer() {
+      const card = DECK[order[idx]];
+      const correct = new Set(card.correct);
+      document.querySelectorAll('.role').forEach(el => {
+        const role = el.dataset.role;
+        if (correct.has(role)) {
+          el.classList.add('selected');
+          el.setAttribute('aria-checked', 'true');
+          el.querySelector('.check').textContent = '✓';
+        }
+      });
+      feedbackEl.classList.add('show');
+      feedbackEl.innerHTML = `<div class="answer-key">Correct: ${card.correct.map(r => `<span class='tag'>${r}</span>`).join('')}</div><div style="margin-top:6px">${card.explanation}</div>`;
+    }
+
+    function next() {
+      if (idx < order.length - 1) {
+        idx++;
+        render();
+      } else {
+        // finished deck
+        promptEl.textContent = 'Deck complete! 🎉';
+        rolesEl.innerHTML = '';
+        feedbackEl.className = 'feedback show correct';
+        feedbackEl.innerHTML = `You answered ${correctCount} of ${DECK.length} correctly on the first try.`;
+        btnSubmit.disabled = true;
+        btnShow.disabled = true;
+        btnNext.style.display = 'none';
+      }
+      updateMeta();
+    }
+
+    function reset(full = false) {
+      idx = 0;
+      selected.clear();
+      correctCount = 0;
+      if (full) order = [...Array(DECK.length).keys()];
+      render();
+    }
+
+    function reshuffle() {
+      order = shuffle([...Array(DECK.length).keys()]);
+      reset(false);
+    }
+
+    function updateMeta() {
+      const total = DECK.length;
+      const current = Math.min(idx + 1, total);
+      qCountEl.textContent = `Card ${current} of ${total}`;
+      statsEl.textContent = `${correctCount} / ${total} correct`;
+      const pct = (idx / total) * 100;
+      barEl.style.inset = `0 ${100 - pct}% 0 0`;
+    }
+
+    function setsEqual(a, b) {
+      if (a.size !== b.size) return false;
+      for (const v of a) if (!b.has(v)) return false;
+      return true;
+    }
+
+    // --- Events -------------------------------------------------------------
+    btnSubmit.addEventListener('click', check);
+    btnNext.addEventListener('click', next);
+    btnReset.addEventListener('click', () => reset(true));
+    btnShuffle.addEventListener('click', reshuffle);
+    btnShow.addEventListener('click', showAnswer);
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.target.closest('input, textarea')) return;
+      if (e.key.toLowerCase() === 's') showAnswer();
+      if (e.key.toLowerCase() === 'c') check();
+      if (e.key === 'ArrowRight') next();
+    });
+
+    // Init
+    reshuffle();
+  </script>
+
+
+</body></html>
