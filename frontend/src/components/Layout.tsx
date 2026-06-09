@@ -10,6 +10,9 @@ export function Layout() {
           <Link to="/">Home</Link>
           <Link to="/news">News</Link>
           <Link to="/cms">CMS</Link>
+          <a href="/fsmo.html" target="_blank" rel="noreferrer">
+            FSMO
+          </a>
         </nav>
       </header>
 
