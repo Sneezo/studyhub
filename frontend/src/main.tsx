@@ -8,7 +8,6 @@ import {
 import "./index.css";
 import { Layout } from "./components/Layout";
 import { HomePage } from "./pages/HomePage";
-import { NewsPage } from "./pages/NewsPage";
 import { CmsDashboard } from "./pages/CmsDashboard";
 import { CmsTermsPage } from "./pages/CmsTermsPage";
 import { CmsTermFormPage } from "./pages/CmsTermFormPage";
