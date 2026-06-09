@@ -23,10 +23,6 @@ const router = createBrowserRouter([
         element: <HomePage />,
       },
       {
-        path: "news",
-        element: <NewsPage />,
-      },
-      {
         path: "cms",
         element: <CmsDashboard />,
       },
