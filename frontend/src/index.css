@@ -1036,3 +1036,33 @@ kbd {
 .existing-review-note {
   color: var(--eccera-muted);
 }
+
+.icon-button {
+  width: 2.4rem;
+  height: 2.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 999px;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.flag-button {
+  border: 1px solid var(--eccera-border-strong);
+  background: #ffffff;
+  color: var(--eccera-text-dark);
+}
+
+.flag-button:hover {
+  border-color: var(--eccera-orange);
+  background: var(--eccera-orange-soft);
+  color: var(--eccera-orange-dark);
+}
+
+.flag-button.review-active {
+  border-color: var(--eccera-orange);
+  background: var(--eccera-orange);
+  color: #ffffff;
+}

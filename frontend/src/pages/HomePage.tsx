@@ -110,6 +110,25 @@ export function HomePage() {
       ? ((safeCurrentIndex + 1) / visibleTerms.length) * 100
       : 0;
 
+
+  const handlePrevious = useCallback(() => {
+    if (termOrder.length === 0) {
+      return;
+    }
+
+    setCurrentIndex((previous) => {
+      if (previous <= 0) {
+        return termOrder.length - 1;
+      }
+
+      return previous - 1;
+    });
+
+    setShowAnswer(false);
+    setIsReviewPanelOpen(false);
+    setReviewNote("");
+  }, [termOrder.length]);
+
   const handleNext = useCallback(() => {
     if (termOrder.length === 0) {
       return;
@@ -146,9 +165,12 @@ export function HomePage() {
         setShowAnswer((previous) => !previous);
       }
 
-      if (event.key === "ArrowRight") {
+        if (event.key === "ArrowRight" || event.key === "d") {
         event.preventDefault();
         handleNext();
+      } else if (event.key === "ArrowLeft" || event.key === "a") {
+        event.preventDefault();
+        handlePrevious();
       }
     }
 
@@ -157,7 +179,7 @@ export function HomePage() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [handleNext]);
+  }, [handleNext, handlePrevious]);
 
   function handleClassChange(classFilter: ClassFilter) {
     setSelectedClass(classFilter);
@@ -335,16 +357,21 @@ export function HomePage() {
                   Show answer
                 </button>
 
+                <button onClick={handlePrevious}>
+                  Previous
+                </button>
+
+
+                <button type="button" onClick={handleNext}>
+                  Next
+                </button>
+                
                 <button
                   type="button"
                   className={currentReviewFlag ? "review-active" : ""}
                   onClick={handleOpenReviewPanel}
                 >
                   {currentReviewFlag ? "Flagged" : "Flag for review"}
-                </button>
-
-                <button type="button" onClick={handleNext}>
-                  Next
                 </button>
 
                 <button type="button" onClick={handleShuffle}>
