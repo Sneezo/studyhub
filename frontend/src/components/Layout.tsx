@@ -12,6 +12,9 @@ export function Layout() {
             FSMO
           </a>
           <Link to="/cms">CMS</Link>
+          <a href="http://packetmon.itacademy.no" target="_blank" rel="noopener noreferrer">
+            PacketMon
+          </a>
         </nav>
       </header>
 

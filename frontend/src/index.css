@@ -1066,3 +1066,28 @@ kbd {
   background: var(--eccera-orange);
   color: #ffffff;
 }
+.term-export {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.flashcard-controls .term-export select {
+  min-width: 0;
+  width: auto;
+}
+
+.flashcard-controls .term-export button {
+  width: auto;
+}
+
+.flashcard-controls .term-export :disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.term-export-error {
+  flex-basis: 100%;
+  font-size: 0.85rem;
+}

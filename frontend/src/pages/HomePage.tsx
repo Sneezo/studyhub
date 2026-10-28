@@ -4,6 +4,7 @@ import { createReviewFlag, getPublicTerms } from "../api/studyHubApi";
 import type { ClassFilter, Subject } from "../data/subjects";
 import type { Term } from "../data/terms";
 import type { ReviewFlag } from "../data/reviewFlagStorage";
+import { TermExport } from "../components/TermExport";
 
 const classFilters: ClassFilter[] = ["All", "SN", "DS"];
 
@@ -381,6 +382,7 @@ export function HomePage() {
                 <button type="button" onClick={handleReset}>
                   Reset
                 </button>
+                <TermExport terms={visibleTerms} subjectName={selectedSubject.name} />
               </div>
             </div>
 
@@ -484,7 +486,12 @@ export function HomePage() {
           !termsError &&
           selectedSubject &&
           visibleTerms.length === 0 && (
-            <p>No flashcards found for this subject.</p>
+            <>
+              <p>No flashcards found for this subject.</p>
+              <div className="flashcard-controls">
+                <TermExport terms={visibleTerms} subjectName={selectedSubject.name} />
+              </div>
+            </>
           )}
       </section>
     </div>
